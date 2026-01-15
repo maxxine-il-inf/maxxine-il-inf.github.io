@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Sacred Spiral</title>
+  <style>
+    html,body{margin:0;height:100%;background:#05060a;overflow:hidden}
+    canvas{display:block;width:100vw;height:100vh}
+  </style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const c=document.getElementById('c'),x=c.getContext('2d');
+let w,h,dpr=1,t=0;
+function R(){
+  dpr=window.devicePixelRatio||1; w=innerWidth; h=innerHeight;
+  c.width=w*dpr; c.height=h*dpr; x.setTransform(dpr,0,0,dpr,0,0);
+}
+addEventListener('resize',R); R();
+
+(function A(){
+  t+=0.01;
+  x.clearRect(0,0,w,h);
+  x.save(); x.translate(w/2,h/2); x.rotate(t*0.35);
+  const n=720, a=Math.min(w,h)*0.43;
+  for(let i=0;i<n;i++){
+    const th=i*0.075, r=a*(i/n);
+    const px=r*Math.cos(th), py=r*Math.sin(th);
+    const s=0.5+2.5*(i/n);
+    x.globalAlpha=0.85*(1-i/n);
+    x.strokeStyle=`hsl(${(i*0.6+t*120)%360} 85% 65%)`;
+    x.beginPath();
+    x.arc(px,py, s, th+t, th+t+Math.PI*1.5);
+    x.stroke();
+  }
+  // subtle "flower-of-life" rings
+  x.globalAlpha=0.16; x.strokeStyle="#cfd6ff";
+  const R0=Math.min(w,h)*0.12;
+  for(let k=0;k<6;k++){
+    const ang=k*Math.PI/3 + t*0.2;
+    x.beginPath();
+    x.arc(R0*Math.cos(ang),R0*Math.sin(ang),R0,0,Math.PI*2);
+    x.stroke();
+  }
+  x.restore();
+  requestAnimationFrame(A);
+})();
+</script>
+</body>
+</html
