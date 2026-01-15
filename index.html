@@ -5,13 +5,17 @@
   html,body{margin:0;height:100%;background:#000;color:#fff;overflow:hidden;font-family:system-ui,-apple-system}
   h1{position:fixed;top:12px;left:0;right:0;margin:0;text-align:center;font-size:16px;letter-spacing:.18em;
      font-weight:700;mix-blend-mode:difference;opacity:.95;pointer-events:none}
+  #chords{position:fixed;right:14px;top:12px;z-index:10;padding:10px 12px;border:1px solid #444;
+    background:rgba(0,0,0,.45);color:#fff;border-radius:12px;font:600 12px system-ui;letter-spacing:.12em}
+  #chords:active{transform:scale(.98)}
   canvas{display:block;width:100vw;height:100vh}
 </style></head><body>
-<h1>frAkqt74lllxzzX</h1><canvas id=c></canvas>
+<h1>frAkqt74lllxzzX</h1><button id="chords">chords</button><canvas id=c></canvas>
 <script>
 const c=document.getElementById('c'),x=c.getContext('2d'); let W,H,D=1,t=0;
 const R=()=>{D=devicePixelRatio||1;W=innerWidth;H=innerHeight;c.width=W*D;c.height=H*D;x.setTransform(D,0,0,D,0,0);
 x.lineWidth=1; x.lineCap="round"}; addEventListener('resize',R); R();
+
 (function A(){
   t+=0.012; x.fillStyle="rgba(0,0,0,.12)"; x.fillRect(0,0,W,H);
   x.save(); x.translate(W/2,H/2); x.rotate(t*.35);
@@ -23,11 +27,56 @@ x.lineWidth=1; x.lineCap="round"}; addEventListener('resize',R); R();
     x.strokeStyle=(i^((t*200)|0))&1?"#fff":"#111";
     x.beginPath(); x.arc(px,py,s,th+t,th+t+Math.PI*1.6); x.stroke();
   }
-  // subtle sacred rings (flower hint)
   x.globalAlpha=0.12; x.strokeStyle="#fff";
   const R0=Math.min(W,H)*0.12;
   for(let k=0;k<6;k++){const ang=k*Math.PI/3+t*.2; x.beginPath();
     x.arc(R0*Math.cos(ang),R0*Math.sin(ang),R0,0,6.283); x.stroke();}
   x.restore(); requestAnimationFrame(A);
 })();
-</script></body></html>
+
+// --- Jazz-fusion harmonic chord snippet (tap to start) ---
+let AC, master;
+const hz=n=>440*Math.pow(2,(n-69)/12); // MIDI note -> Hz
+
+function chord(ctx, when, midiNotes, dur=0.65){
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, when);
+  g.gain.exponentialRampToValueAtTime(0.22, when+0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, when+dur);
+  g.connect(master);
+
+  midiNotes.forEach((n,i)=>{
+    const o = ctx.createOscillator();
+    o.type = "sine";
+    o.frequency.setValueAtTime(hz(n), when);
+    o.detune.setValueAtTime((i-(midiNotes.length-1)/2)*3, when); // subtle shimmer
+    o.connect(g);
+    o.start(when);
+    o.stop(when+dur+0.05);
+  });
+}
+
+function playFusion(){
+  AC = AC || new (window.AudioContext||window.webkitAudioContext)();
+  if (AC.state === "suspended") AC.resume();
+  master = master || (()=>{ const m=AC.createGain(); m.gain.value=0.55; m.connect(AC.destination); return m; })();
+
+  const now = AC.currentTime + 0.03;
+
+  // Dm9 -> G13 -> Cmaj9(#11) -> F#7alt-ish -> Bm11 -> E13 -> Amaj9
+  const prog = [
+    [50,57,60,64,69], // Dm9
+    [55,59,62,65,69], // G13 color
+    [48,55,59,64,66], // Cmaj9(#11)
+    [54,58,60,64,69], // F#7alt-ish color
+    [47,54,57,62,64], // Bm11
+    [52,56,59,62,66], // E13
+    [45,52,56,61,64], // Amaj9
+  ];
+
+  const step = 0.72;
+  prog.forEach((notes,i)=> chord(AC, now + i*step, notes, 0.62));
+}
+
+document.getElementById("chords").addEventListener("click", playFusion);
+</script></body></html
