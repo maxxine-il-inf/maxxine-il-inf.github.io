@@ -1,82 +1,53 @@
-<!doctype html><html><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>frAkqt74lllxzzX</title>
+<!doctype html><meta name=viewport content="width=device-width,initial-scale=1">
+<title>mookie</title>
 <style>
-  html,body{margin:0;height:100%;background:#000;color:#fff;overflow:hidden;font-family:system-ui,-apple-system}
-  h1{position:fixed;top:12px;left:0;right:0;margin:0;text-align:center;font-size:16px;letter-spacing:.18em;
-     font-weight:700;mix-blend-mode:difference;opacity:.95;pointer-events:none}
-  #chords{position:fixed;right:14px;top:12px;z-index:10;padding:10px 12px;border:1px solid #444;
-    background:rgba(0,0,0,.45);color:#fff;border-radius:12px;font:600 12px system-ui;letter-spacing:.12em}
-  #chords:active{transform:scale(.98)}
+  html,body{margin:0;height:100%;background:#04070b;overflow:hidden}
   canvas{display:block;width:100vw;height:100vh}
-</style></head><body>
-<h1>frAkqt74lllxzzX</h1><button id="chords">chords</button><canvas id=c></canvas>
+</style>
+<canvas id=c></canvas>
 <script>
-const c=document.getElementById('c'),x=c.getContext('2d'); let W,H,D=1,t=0;
-const R=()=>{D=devicePixelRatio||1;W=innerWidth;H=innerHeight;c.width=W*D;c.height=H*D;x.setTransform(D,0,0,D,0,0);
-x.lineWidth=1; x.lineCap="round"}; addEventListener('resize',R); R();
-
+const c=document.getElementById('c'),x=c.getContext('2d'); let W,H,D=1,t=0,S=0;
+const R=()=>{D=devicePixelRatio||1;W=innerWidth;H=innerHeight;c.width=W*D;c.height=H*D;x.setTransform(D,0,0,D,0,0);x.lineCap="round"};
+addEventListener('resize',R); R();
+const r=()=>Math.random(), n=720, pts=[...Array(n)].map((_,i)=>({a:r()*6.28,b:r()*6.28,c:r()*6.28,k:.6+r()*2.6,m:.6+r()*2.6,w:.2+r()*1.6}));
 (function A(){
-  t+=0.012; x.fillStyle="rgba(0,0,0,.12)"; x.fillRect(0,0,W,H);
-  x.save(); x.translate(W/2,H/2); x.rotate(t*.35);
-  const n=900, a=Math.min(W,H)*0.46;
+  t+=0.012;
+  x.fillStyle="rgba(4,7,11,.08)"; x.fillRect(0,0,W,H);
+  x.save(); x.translate(W/2,H/2);
+  const s=Math.min(W,H)*0.38, F=520, rot=t*0.35, rot2=t*0.27;
   for(let i=0;i<n;i++){
-    const u=i/n, th=u*28*Math.PI + Math.sin(t+u*9)*0.35, r=a*Math.pow(u,0.72);
-    const px=r*Math.cos(th), py=r*Math.sin(th), s=1+3*u;
-    x.globalAlpha=0.9*(1-u);
-    x.strokeStyle=(i^((t*200)|0))&1?"#fff":"#111";
-    x.beginPath(); x.arc(px,py,s,th+t,th+t+Math.PI*1.6); x.stroke();
+    const p=pts[i], u=i/n, ph=t*p.w;
+    // evolving 3D param curve (never repeats because of mixed incommensurate freqs + slow drift)
+    const X=s*(Math.sin(p.a+ph*p.k)+0.55*Math.sin(p.b+ph*p.m+Math.sin(rot)) + 0.18*Math.sin(p.c+ph*1.7+S));
+    const Y=s*(Math.cos(p.b+ph*p.k)+0.55*Math.cos(p.c+ph*p.m+Math.sin(rot2)) + 0.18*Math.cos(p.a+ph*1.9+S));
+    const Z=s*(Math.sin(p.c+ph*0.9)+0.65*Math.cos(p.a+ph*1.1) + 0.25*Math.sin(p.b+ph*0.7+S))*0.85;
+
+    // rotate in 3D (two-axis)
+    let x1=X*Math.cos(rot)-Z*Math.sin(rot), z1=X*Math.sin(rot)+Z*Math.cos(rot);
+    let y1=Y*Math.cos(rot2)-z1*Math.sin(rot2), z2=Y*Math.sin(rot2)+z1*Math.cos(rot2);
+
+    // perspective project
+    const k=F/(F+z2+220), px=x1*k, py=y1*k;
+
+    // connect to previous point for elegant line field
+    if(i){
+      const q=pts[i-1], uq=(i-1)/n, phq=t*q.w;
+      const Xq=s*(Math.sin(q.a+phq*q.k)+0.55*Math.sin(q.b+phq*q.m+Math.sin(rot)) + 0.18*Math.sin(q.c+phq*1.7+S));
+      const Yq=s*(Math.cos(q.b+phq*q.k)+0.55*Math.cos(q.c+phq*q.m+Math.sin(rot2)) + 0.18*Math.cos(q.a+phq*1.9+S));
+      const Zq=s*(Math.sin(q.c+phq*0.9)+0.65*Math.cos(q.a+phq*1.1) + 0.25*Math.sin(q.b+phq*0.7+S))*0.85;
+      let xq=Xq*Math.cos(rot)-Zq*Math.sin(rot), zq=Xq*Math.sin(rot)+Zq*Math.cos(rot);
+      let yq=Yq*Math.cos(rot2)-zq*Math.sin(rot2), zqq=Yq*Math.sin(rot2)+zq*Math.cos(rot2);
+      const kq=F/(F+zqq+220), pxq=xq*kq, pyq=yq*kq;
+
+      const depth=(k+kq)*0.5, a=.55*depth*(1-u);
+      x.globalAlpha=a;
+      x.lineWidth=0.4+2.2*depth;
+      x.strokeStyle=`hsl(${180+90*Math.sin(u*5+t*0.9)+40*Math.sin(t*0.2+S)} 95% ${55+18*depth}%)`;
+      x.beginPath(); x.moveTo(pxq,pyq); x.lineTo(px,py); x.stroke();
+    }
   }
-  x.globalAlpha=0.12; x.strokeStyle="#fff";
-  const R0=Math.min(W,H)*0.12;
-  for(let k=0;k<6;k++){const ang=k*Math.PI/3+t*.2; x.beginPath();
-    x.arc(R0*Math.cos(ang),R0*Math.sin(ang),R0,0,6.283); x.stroke();}
-  x.restore(); requestAnimationFrame(A);
+  x.restore();
+  S+=0.0009; // slow drift so it never settles into a loop
+  requestAnimationFrame(A);
 })();
-
-// --- Jazz-fusion harmonic chord snippet (tap to start) ---
-let AC, master;
-const hz=n=>440*Math.pow(2,(n-69)/12); // MIDI note -> Hz
-
-function chord(ctx, when, midiNotes, dur=0.65){
-  const g = ctx.createGain();
-  g.gain.setValueAtTime(0.0001, when);
-  g.gain.exponentialRampToValueAtTime(0.22, when+0.02);
-  g.gain.exponentialRampToValueAtTime(0.0001, when+dur);
-  g.connect(master);
-
-  midiNotes.forEach((n,i)=>{
-    const o = ctx.createOscillator();
-    o.type = "sine";
-    o.frequency.setValueAtTime(hz(n), when);
-    o.detune.setValueAtTime((i-(midiNotes.length-1)/2)*3, when); // subtle shimmer
-    o.connect(g);
-    o.start(when);
-    o.stop(when+dur+0.05);
-  });
-}
-
-function playFusion(){
-  AC = AC || new (window.AudioContext||window.webkitAudioContext)();
-  if (AC.state === "suspended") AC.resume();
-  master = master || (()=>{ const m=AC.createGain(); m.gain.value=0.55; m.connect(AC.destination); return m; })();
-
-  const now = AC.currentTime + 0.03;
-
-  // Dm9 -> G13 -> Cmaj9(#11) -> F#7alt-ish -> Bm11 -> E13 -> Amaj9
-  const prog = [
-    [50,57,60,64,69], // Dm9
-    [55,59,62,65,69], // G13 color
-    [48,55,59,64,66], // Cmaj9(#11)
-    [54,58,60,64,69], // F#7alt-ish color
-    [47,54,57,62,64], // Bm11
-    [52,56,59,62,66], // E13
-    [45,52,56,61,64], // Amaj9
-  ];
-
-  const step = 0.72;
-  prog.forEach((notes,i)=> chord(AC, now + i*step, notes, 0.62));
-}
-
-document.getElementById("chords").addEventListener("click", playFusion);
-</script></body></html
+</script>
