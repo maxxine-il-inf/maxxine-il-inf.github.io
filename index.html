@@ -1,202 +1,363 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>superixoniQ_$infiniti. ii</title>
-
-<!-- Social preview (Open Graph / Twitter). Use an inline SVG data URL = blank teal square. -->
-<meta property="og:type" content="website" />
-<meta property="og:title" content="superixoniQ_$infiniti. ii" />
-<meta property="og:description" content="Animated stripes + infiniti grid." />
-<meta property="og:image" content="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='1200'%20height='630'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%2300b9b0'/%3E%3C/svg%3E" />
-<meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="superixoniQ_$infiniti. ii" />
-<meta name="twitter:description" content="Animated stripes + infiniti grid." />
-<meta name="twitter:image" content="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='1200'%20height='630'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%2300b9b0'/%3E%3C/svg%3E" />
-
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Matrix Infinity</title>
 <style>
-  html,body{height:100%;margin:0;background:#fff;overflow:hidden}
-  canvas{display:block;width:100vw;height:100vh}
-  .t{
-    position:fixed;top:0;left:0;right:0;
-    padding:clamp(10px,2.2vh,22px) 0;
-    text-align:center;pointer-events:none;user-select:none;
-    font:900 clamp(18px,4.8vw,64px)/1 "Impact","Arial Black",system-ui,sans-serif;
-    letter-spacing:.12em;color:#000;mix-blend-mode:multiply;
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #000;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+    font-family: 'Courier New', monospace;
   }
-  .t span{
-    display:inline-block;transform:skewX(-14deg);
-    text-shadow:
-      -2px 0 0 #fff, 2px 0 0 #fff, 0 -2px 0 #fff, 0 2px 0 #fff,
-      -5px 5px 0 rgba(0,0,0,.35),
-      0 10px 28px rgba(0,0,0,.18);
+
+  canvas { display: block; position: absolute; top: 0; left: 0; }
+
+  #matrix-bg { z-index: 1; }
+  #infinity-canvas { z-index: 2; }
+  #laser-canvas { z-index: 3; }
+  #overlay-canvas { z-index: 4; }
+
+  #title {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+    text-align: center;
+    pointer-events: none;
   }
-  button{
-    position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);
-    border:2px solid #000;background:#fff;color:#000;
-    padding:10px 16px;border-radius:999px;
-    font:800 clamp(12px,2.2vw,16px)/1 system-ui,sans-serif;
-    letter-spacing:.18em;text-transform:uppercase;
-    box-shadow:0 10px 28px rgba(0,0,0,.12);
-    cursor:pointer;
+
+  #title h1 {
+    font-family: 'Courier New', monospace;
+    font-size: clamp(16px, 3vw, 40px);
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    color: transparent;
+    background: linear-gradient(180deg, #00ff41, #00cc33, #003300);
+    -webkit-background-clip: text;
+    background-clip: text;
+    text-shadow: 0 0 30px #00ff41, 0 0 60px #00ff41;
+    animation: flicker 4s infinite;
   }
-  button:active{transform:translate(-50%,-50%) scale(.98)}
+
+  @keyframes flicker {
+    0%, 95%, 100% { opacity: 1; }
+    96% { opacity: 0.7; }
+    97% { opacity: 1; }
+    98% { opacity: 0.4; }
+    99% { opacity: 1; }
+  }
 </style>
 </head>
 <body>
-<canvas id="c"></canvas>
-<div class="t"><span>superixoniQ_$infiniti. ii</span></div>
-<button id="b">Mono</button>
+
+<canvas id="matrix-bg"></canvas>
+<canvas id="infinity-canvas"></canvas>
+<canvas id="laser-canvas"></canvas>
+<canvas id="overlay-canvas"></canvas>
+
+<div id="title">
+  <h1>â MATRIX â</h1>
+</div>
 
 <script>
-(() => {
-  const c = document.getElementById('c'), g = c.getContext('2d', {alpha:false});
-  const btn = document.getElementById('b');
+const W = window.innerWidth;
+const H = window.innerHeight;
 
-  let w=0,h=0,dpr=1,t0=performance.now();
-  let mode = 0;      // 0 mono, 1 blue/green, 2 purple/pink, 3 mixed
-  let widthFlip = 0; // toggles stripe thickness each click
-  const labels = ["Mono","Blue/Green","Purple/Pink","Mixed"];
+function resize(c) { c.width = W; c.height = H; }
 
-  const fit=()=>{ dpr=Math.max(1,Math.min(2,devicePixelRatio||1));
-    w=innerWidth; h=innerHeight; c.width=(w*dpr)|0; c.height=(h*dpr)|0; g.setTransform(dpr,0,0,dpr,0,0);
-  };
-  addEventListener('resize', fit, {passive:true}); fit();
+// âââ CANVAS SETUP âââââââââââââââââââââââââââââââââââââââââââââââ
+const bgCanvas = document.getElementById('matrix-bg');
+const infCanvas = document.getElementById('infinity-canvas');
+const lasCanvas = document.getElementById('laser-canvas');
+const ovCanvas = document.getElementById('overlay-canvas');
 
-  btn.addEventListener('click', () => {
-    mode = (mode + 1) & 3;
-    widthFlip ^= 1;
-    btn.textContent = labels[mode];
-  }, {passive:true});
+[bgCanvas, infCanvas, lasCanvas, ovCanvas].forEach(resize);
 
-  // tiny 3D helpers
-  const rotX=(p,a)=>{const s=Math.sin(a),c=Math.cos(a);return{x:p.x,y:p.y*c-p.z*s,z:p.y*s+p.z*c};};
-  const rotY=(p,a)=>{const s=Math.sin(a),c=Math.cos(a);return{x:p.x*c+p.z*s,y:p.y,z:-p.x*s+p.z*c};};
-  const proj=(p,cam)=>{const z=p.z+cam,k=cam/z;return{x:p.x*k+w/2,y:p.y*k+h/2,_z:p.z};};
+const bgCtx = bgCanvas.getContext('2d');
+const infCtx = infCanvas.getContext('2d');
+const lasCtx = lasCanvas.getContext('2d');
+const ovCtx = ovCanvas.getContext('2d');
 
-  // palettes
-  const palBG = [[30,220,190],[45,255,120]];   // teal -> lime
-  const palPP = [[170,70,255],[255,70,170]];   // violet -> pink
-  const mix=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
-  const rgb=a=>`rgb(${a[0]|0},${a[1]|0},${a[2]|0})`;
+// âââ MATRIX RAIN ââââââââââââââââââââââââââââââââââââââââââââââââ
+const FONT_SIZE = 14;
+const COLS = Math.floor(W / FONT_SIZE);
+const drops = Array(COLS).fill(1).map(() => Math.random() * -100);
 
-  function color(t,i){
-    if(!mode) return "#000";
-    const u = 0.5 + 0.5*Math.sin(t*0.9 + i*0.22);
-    const v = 0.5 + 0.5*Math.sin(t*0.55 + i*0.11);
-    const cBG = mix(palBG[0], palBG[1], u);
-    const cPP = mix(palPP[0], palPP[1], u);
-    if(mode===1) return rgb(cBG);
-    if(mode===2) return rgb(cPP);
-    return rgb(mix(cBG, cPP, v));
-  }
+const CHARS = 'ã¢ã¤ã¦ã¨ãªã«ã­ã¯ã±ã³ãµã·ã¹ã»ã½ã¿ããããããããããããããããã ã¡ã¢ã¤ã¦ã¨ã©ãªã«ã¬ã­ã¯ã²ã³0123456789ABCDEF<>{}[]|=+-*/\\!@#$%^&';
 
-  function stripes(t){
-    const pitch = Math.max(10, Math.min(w,h)*0.045);
-    const baseThick = pitch*0.5;
+function drawMatrix() {
+  bgCtx.fillStyle = 'rgba(0,0,0,0.04)';
+  bgCtx.fillRect(0, 0, W, H);
 
-    const thin = mode ? 0.26 : 0.42;
-    const fat  = mode ? 0.62 : 0.52;
-    const thick = baseThick * (widthFlip ? thin : fat);
+  for (let i = 0; i < drops.length; i++) {
+    const char = CHARS[Math.floor(Math.random() * CHARS.length)];
+    const x = i * FONT_SIZE;
+    const y = drops[i] * FONT_SIZE;
 
-    const ang  = 0.55 + 0.22*Math.sin(t*0.35);
-    const flow = (t*140) % pitch;
-
-    g.fillStyle="#fff"; g.fillRect(0,0,w,h);
-
-    g.save();
-    g.translate(w/2,h/2); g.rotate(ang); g.translate(-w/2,-h/2);
-
-    const diag=Math.hypot(w,h), pad=diag*1.5;
-
-    for(let n=0, y=-pad+flow; y<pad; y+=pitch, n++){
-      const wob = 1 + 0.10*Math.sin(t*1.3 + y*0.012);
-      const th = thick*wob;
-      g.fillStyle = color(t,n);
-      g.fillRect(-pad, y-th/2, pad*3, th);
-    }
-    g.restore();
-  }
-
-  // 3D “infiniti” ribbon grid overlay (wireframe)
-  function infinitiGrid(t){
-    const S = Math.min(w,h);
-    const A = S*0.28, B = S*0.16, D = S*0.18;
-    const R = S*0.06;
-    const cam = S*1.05;
-
-    const ax = 0.55 + 0.10*Math.sin(t*0.6);
-    const ay = -0.65 + 0.18*Math.sin(t*0.4);
-
-    const Nu=96, Nv=9;
-
-    const P=(u,v)=>{
-      const su=Math.sin(u), cu=Math.cos(u);
-      const x=A*su;
-      const y=B*su*cu*2;
-      const z=D*Math.cos(u);
-      const tw=u*0.9 + t*0.8;
-      const oy=(v*R)*Math.cos(tw);
-      const oz=(v*R)*Math.sin(tw);
-      return {x, y:y+oy, z:z+oz};
-    };
-
-    g.save();
-    g.lineWidth = Math.max(1, S*0.0016);
-
-    const pts = Array.from({length:Nu}, ()=>Array(Nv));
-    for(let iu=0; iu<Nu; iu++){
-      const u=(iu/(Nu-1))*Math.PI*2;
-      for(let iv=0; iv<Nv; iv++){
-        const v=(iv/(Nv-1))*2-1;
-        let p=P(u,v);
-        p=rotX(p,ax); p=rotY(p,ay);
-        pts[iu][iv]=proj(p,cam);
-      }
+    // Head glow - brighter white/cyan
+    if (drops[i] * FONT_SIZE > 0 && drops[i] * FONT_SIZE < H) {
+      bgCtx.shadowBlur = 8;
+      bgCtx.shadowColor = '#00ffff';
+      bgCtx.fillStyle = '#ccffcc';
+      bgCtx.font = `bold ${FONT_SIZE}px Courier New`;
+      bgCtx.fillText(char, x, y);
     }
 
-    const line=(a,b,alpha,i)=>{
-      const z=(a._z+b._z)*0.5;
-      const depth=0.55 + 0.45*Math.max(0, Math.min(1, (cam - z)/cam));
-      g.globalAlpha = alpha * depth;
-      g.strokeStyle = color(t,i);
-      g.beginPath(); g.moveTo(a.x,a.y); g.lineTo(b.x,b.y); g.stroke();
-    };
+    // Trail
+    bgCtx.shadowBlur = 4;
+    bgCtx.shadowColor = '#00ff41';
+    bgCtx.fillStyle = '#00ff41';
+    bgCtx.font = `${FONT_SIZE}px Courier New`;
+    bgCtx.fillText(CHARS[Math.floor(Math.random() * CHARS.length)], x, y - FONT_SIZE);
 
-    g.globalCompositeOperation = "multiply";
+    bgCtx.shadowBlur = 0;
 
-    let k=0;
-    for(let iv=0; iv<Nv; iv++){
-      for(let iu=0; iu<Nu-1; iu++,k++){
-        line(pts[iu][iv], pts[iu+1][iv], mode?0.26:0.22, k);
-      }
-    }
-    for(let iu=0; iu<Nu; iu+=2){
-      for(let iv=0; iv<Nv-1; iv++,k++){
-        line(pts[iu][iv], pts[iu][iv+1], mode?0.22:0.18, k);
-      }
-    }
+    if (y > H && Math.random() > 0.975) drops[i] = 0;
+    drops[i] += 0.5 + Math.random() * 0.5;
+  }
+}
 
-    // shimmer sweep
-    g.globalAlpha = mode ? 0.06 : 0.05;
-    g.fillStyle = color(t,999);
-    const sweep = (t*60) % (h+80) - 80;
-    g.fillRect(0, sweep, w, 24);
+// âââ INFINITY MIRROR ââââââââââââââââââââââââââââââââââââââââââââ
+function drawInfinityMirror(t) {
+  infCtx.clearRect(0, 0, W, H);
 
-    g.restore();
-    g.globalAlpha = 1;
-    g.globalCompositeOperation = "source-over";
+  const cx = W / 2;
+  const cy = H / 2;
+  const maxRings = 18;
+
+  for (let ring = maxRings; ring >= 1; ring--) {
+    const prog = ring / maxRings;
+    const pulse = 0.85 + 0.15 * Math.sin(t * 0.002 + ring * 0.4);
+    const scale = prog * pulse;
+
+    const rx = cx * scale * 0.9;
+    const ry = cy * scale * 0.55;
+
+    // Receding depth effect
+    const alpha = (1 - prog) * 0.6 + 0.05;
+    const green = Math.floor(100 + 155 * (1 - prog));
+    const cyan = Math.floor(50 * (1 - prog));
+
+    infCtx.save();
+    infCtx.translate(cx, cy);
+    infCtx.rotate(Math.sin(t * 0.0005) * 0.05 * prog);
+
+    // Frame rect with perspective-like skew
+    infCtx.beginPath();
+    infCtx.rect(-rx, -ry, rx * 2, ry * 2);
+    infCtx.strokeStyle = `rgba(0,${green},${cyan},${alpha})`;
+    infCtx.lineWidth = 0.5 + (1 - prog) * 2;
+    infCtx.shadowBlur = 8 * (1 - prog);
+    infCtx.shadowColor = `rgba(0,255,65,${alpha})`;
+    infCtx.stroke();
+
+    // Corner markers
+    const corners = [[-rx, -ry], [rx, -ry], [rx, ry], [-rx, ry]];
+    corners.forEach(([ex, ey]) => {
+      infCtx.beginPath();
+      infCtx.arc(ex, ey, 2 * (1-prog) + 0.5, 0, Math.PI * 2);
+      infCtx.fillStyle = `rgba(0,255,65,${alpha * 1.5})`;
+      infCtx.fill();
+    });
+
+    infCtx.restore();
   }
 
-  function frame(now){
-    const t = (now - t0)*0.001;
-    stripes(t);
-    infinitiGrid(t);
-    requestAnimationFrame(frame);
+  // Central glow
+  const grd = infCtx.createRadialGradient(cx, cy, 0, cx, cy, 80);
+  grd.addColorStop(0, 'rgba(0,255,65,0.15)');
+  grd.addColorStop(0.5, 'rgba(0,255,65,0.05)');
+  grd.addColorStop(1, 'rgba(0,0,0,0)');
+  infCtx.fillStyle = grd;
+  infCtx.fillRect(0, 0, W, H);
+}
+
+// âââ LASERS âââââââââââââââââââââââââââââââââââââââââââââââââââââ
+const lasers = [];
+
+class Laser {
+  constructor() { this.reset(); }
+  reset() {
+    const side = Math.floor(Math.random() * 4);
+    if (side === 0) { this.x = Math.random() * W; this.y = 0; }
+    else if (side === 1) { this.x = W; this.y = Math.random() * H; }
+    else if (side === 2) { this.x = Math.random() * W; this.y = H; }
+    else { this.x = 0; this.y = Math.random() * H; }
+
+    // Aim toward center area with spread
+    const tx = W/2 + (Math.random()-0.5) * W * 0.5;
+    const ty = H/2 + (Math.random()-0.5) * H * 0.5;
+    const dist = Math.hypot(tx - this.x, ty - this.y);
+    const speed = 6 + Math.random() * 8;
+    this.vx = (tx - this.x) / dist * speed;
+    this.vy = (ty - this.y) / dist * speed;
+
+    const hue = Math.random();
+    if (hue < 0.4) { // green
+      this.color = [0, 255, 65];
+    } else if (hue < 0.65) { // cyan
+      this.color = [0, 200, 255];
+    } else if (hue < 0.82) { // red
+      this.color = [255, 30, 0];
+    } else { // white-blue
+      this.color = [150, 255, 255];
+    }
+
+    this.life = 1;
+    this.decay = 0.008 + Math.random() * 0.015;
+    this.width = 1 + Math.random() * 2.5;
+    this.trail = [];
+    this.maxTrail = 28;
   }
-  requestAnimationFrame(frame);
-})();
+
+  update() {
+    this.trail.push({ x: this.x, y: this.y });
+    if (this.trail.length > this.maxTrail) this.trail.shift();
+    this.x += this.vx;
+    this.y += this.vy;
+    this.life -= this.decay;
+    if (this.life <= 0 || this.x < -50 || this.x > W+50 || this.y < -50 || this.y > H+50) {
+      this.reset();
+    }
+  }
+
+  draw(ctx) {
+    if (this.trail.length < 2) return;
+    const [r, g, b] = this.color;
+
+    for (let i = 1; i < this.trail.length; i++) {
+      const prog = i / this.trail.length;
+      const alpha = prog * this.life;
+      ctx.beginPath();
+      ctx.moveTo(this.trail[i-1].x, this.trail[i-1].y);
+      ctx.lineTo(this.trail[i].x, this.trail[i].y);
+      ctx.strokeStyle = `rgba(${r},${g},${b},${alpha})`;
+      ctx.lineWidth = this.width * prog;
+      ctx.shadowBlur = 12 * prog;
+      ctx.shadowColor = `rgba(${r},${g},${b},${alpha})`;
+      ctx.stroke();
+    }
+
+    // Head flare
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.width * 2, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${r},${g},${b},${this.life * 0.9})`;
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = `rgba(${r},${g},${b},1)`;
+    ctx.fill();
+  }
+}
+
+for (let i = 0; i < 25; i++) {
+  const l = new Laser();
+  // Stagger start
+  for (let j = 0; j < Math.random() * 60; j++) l.update();
+  lasers.push(l);
+}
+
+// âââ CODE OVERLAY TEXT ââââââââââââââââââââââââââââââââââââââââââ
+const CODE_LINES = [
+  'while(â){reflect(self);}',
+  'matrix.load("reality.exe")',
+  'DECRYPT_SEQUENCE: 0xDEADBEEF',
+  'if(depth > MAX_DEPTH) break;',
+  '>> PENETRATING FIREWALL...',
+  'LASER_SYS.ARMED = TRUE',
+  'for(x in 0..â) recurse(x);',
+  'MIRROR.reflect(MIRROR)',
+  '01001101 01000001 01010100',
+  'kernel32.dll > OVERRIDE',
+  'ACCESS_GRANTED :: ROOT',
+  'RENDER_DEPTH: [ââââââââ]',
+  'SUBSYSTEM: NEURALNET OK',
+  'flux_capacitor.charge(88)',
+  'DATA_STREAM: CORRUPTED',
+];
+
+const overlayItems = [];
+for (let i = 0; i < 20; i++) {
+  overlayItems.push({
+    text: CODE_LINES[Math.floor(Math.random() * CODE_LINES.length)],
+    x: Math.random() * W,
+    y: Math.random() * H,
+    alpha: Math.random(),
+    speed: 0.003 + Math.random() * 0.005,
+    phase: Math.random() * Math.PI * 2,
+    size: 8 + Math.random() * 6,
+  });
+}
+
+function drawOverlay(t) {
+  ovCtx.clearRect(0, 0, W, H);
+  overlayItems.forEach(item => {
+    item.alpha = 0.15 + 0.25 * Math.abs(Math.sin(t * item.speed + item.phase));
+    ovCtx.font = `${item.size}px Courier New`;
+    ovCtx.fillStyle = `rgba(0,255,65,${item.alpha})`;
+    ovCtx.shadowBlur = 4;
+    ovCtx.shadowColor = '#00ff41';
+    ovCtx.fillText(item.text, item.x, item.y);
+    ovCtx.shadowBlur = 0;
+  });
+
+  // Occasionally flash random bright text
+  if (Math.random() < 0.02) {
+    const line = CODE_LINES[Math.floor(Math.random() * CODE_LINES.length)];
+    ovCtx.font = 'bold 11px Courier New';
+    ovCtx.fillStyle = 'rgba(0,255,150,0.9)';
+    ovCtx.shadowBlur = 10;
+    ovCtx.shadowColor = '#00ffaa';
+    ovCtx.fillText(line, Math.random() * W * 0.7, Math.random() * H);
+    ovCtx.shadowBlur = 0;
+  }
+}
+
+// âââ MAIN LOOP âââââââââââââââââââââââââââââââââââââââââââââââââââ
+let frame = 0;
+function animate(t) {
+  frame++;
+
+  // Matrix: every frame
+  drawMatrix();
+
+  // Infinity mirror: every frame
+  drawInfinityMirror(t);
+
+  // Lasers
+  lasCtx.clearRect(0, 0, W, H);
+  lasCtx.shadowBlur = 0;
+  lasers.forEach(l => { l.update(); l.draw(lasCtx); });
+
+  // Code overlay
+  drawOverlay(t);
+
+  requestAnimationFrame(animate);
+}
+
+requestAnimationFrame(animate);
+
+// âââ SCANLINE EFFECT (CSS overlay via canvas) ââââââââââââââââââââ
+const scanCanvas = document.createElement('canvas');
+scanCanvas.width = W; scanCanvas.height = H;
+scanCanvas.style.cssText = 'position:absolute;top:0;left:0;z-index:5;pointer-events:none;';
+document.body.appendChild(scanCanvas);
+const scanCtx = scanCanvas.getContext('2d');
+
+for (let y = 0; y < H; y += 3) {
+  scanCtx.fillStyle = 'rgba(0,0,0,0.12)';
+  scanCtx.fillRect(0, y, W, 1);
+}
+
+// Vignette
+const vig = scanCtx.createRadialGradient(W/2, H/2, H*0.3, W/2, H/2, H*0.85);
+vig.addColorStop(0, 'rgba(0,0,0,0)');
+vig.addColorStop(1, 'rgba(0,0,0,0.75)');
+scanCtx.fillStyle = vig;
+scanCtx.fillRect(0, 0, W, H);
 </script>
 </body>
 </html>
